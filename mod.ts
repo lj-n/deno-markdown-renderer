@@ -42,10 +42,10 @@ class Renderer extends Marked.Renderer {
   link(href: string, title: string, text: string) {
     const { linkClass } = this.customOptions;
     const customClass = linkClass ? ` class="${linkClass}"` : "";
-    if (!href.startsWith("#")) {
+    if (href.startsWith("#")) {
       return `<a href="${href}"${customClass}>${text}</a>`;
     }
-    return `<a href="${href}" title="${title}" title="${title}" rel="noopener noreferrer"${customClass}>${text}</a>`;
+    return `<a href="${href}" title="${title}" rel="noopener noreferrer"${customClass}>${text}</a>`;
   }
 }
 
