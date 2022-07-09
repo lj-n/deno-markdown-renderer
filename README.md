@@ -82,8 +82,8 @@ const svg = '
 ';
 
 const options = {
-  sanitizeAllowTags: ["svg", "circle"],
-  sanitizeAllowAttributes: {
+  allowedTags: ["svg", "circle"],
+  allowedAttributes: {
     svg: ["height", "width"],
     circle: ["cx", "cy", "r", "stroke"],
   },
