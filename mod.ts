@@ -1,5 +1,51 @@
 import { He, Marked, Prismjs, sanitizeHTML } from "./depts.ts";
 
+const TAGS = sanitizeHTML.defaults.allowedTags;
+const ATTRIBUTES: { [key: string]: string[] } = {
+  ...sanitizeHTML.defaults.allowedAttributes,
+  a: ["href", "title", "rel", "tabindex", "aria-hidden", "class"],
+  h1: ["id", "class"],
+  h2: ["id", "class"],
+  h3: ["id", "class"],
+  h4: ["id", "class"],
+  h5: ["id", "class"],
+  h6: ["id", "class"],
+};
+const CLASSES: { [key: string]: string[] } = {
+  a: ["anchor"],
+  pre: ["highlight", "language-*"],
+  span: [
+    "atrule-id",
+    "attr-name",
+    "boolean",
+    "cdata",
+    "class-name",
+    "comment",
+    "control",
+    "doctype",
+    "function",
+    "keyword",
+    "namespace",
+    "number",
+    "operator",
+    "plain-text",
+    "prolog",
+    "property",
+    "punctuation",
+    "regex",
+    "regex-delimiter",
+    "script",
+    "script-punctuation",
+    "selector",
+    "statement",
+    "string",
+    "tag",
+    "tag-id",
+    "token",
+    "unit",
+  ],
+};
+
 interface CustomRenderOptions {
   anchorElement?: string;
   linkClass?: string;
@@ -21,7 +67,7 @@ class Renderer extends Marked.Renderer {
       return `<pre${customClass}><code>${He.escape(code)}</code></pre$>`;
     }
     const html = Prismjs.highlight(code, Prismjs.languages[lang], lang);
-    return `<div class="highlight language-${lang}"${customClass}><pre>${html}</pre></div>`;
+    return `<pre class="highlight language-${lang}"${customClass}>${html}</pre>`;
   }
 
   heading(
@@ -49,36 +95,56 @@ class Renderer extends Marked.Renderer {
   }
 }
 
-interface CustomOptions {
+export interface Options
+  extends Omit<
+    sanitizeHTML.IOptions,
+    "allowedTags" | "allowedAttributes" | "allowedClasses"
+  > {
   gfm?: boolean;
-  renderOptions?: CustomRenderOptions;
-  sanitizeAllowTags?: string[];
-  sanitizeAllowAttributes?: { [key: string]: string[] };
-  sanitizeAllowClasses?: { [key: string]: string[] };
+  render?: CustomRenderOptions;
+  allowedTags?: string[];
+  allowedAttributes?: { [key: string]: string[] };
+  allowedClasses?: { [key: string]: string[] };
+  disableDefaults?: boolean;
 }
 
-export function renderMarkdown(
-  markdown: string,
-  { gfm = true, ...options }: CustomOptions = {}
-) {
+export function renderMarkdown(markdown: string, options: Options = {}) {
+  const {
+    gfm = true,
+    allowedTags = [],
+    allowedAttributes = {},
+    allowedClasses = {},
+    ...rest
+  } = options;
+
   const htmlString = Marked.marked(markdown, {
-    renderer: new Renderer(options.renderOptions),
+    renderer: new Renderer(options.render),
     gfm,
   });
 
-  const allowedTags = sanitizeHTML.defaults.allowedTags.concat(
-    options.sanitizeAllowTags || []
-  );
+  if (options.disableDefaults) {
+    return sanitizeHTML(htmlString, {
+      ...rest,
+      allowedTags,
+      allowedAttributes,
+      allowedClasses,
+    });
+  }
+
+  for (const key in allowedAttributes) {
+    ATTRIBUTES[key] =
+      ATTRIBUTES[key]?.concat(allowedAttributes[key]) || allowedAttributes[key];
+  }
+
+  for (const key in allowedClasses) {
+    CLASSES[key] =
+      CLASSES[key]?.concat(allowedClasses[key]) || allowedClasses[key];
+  }
 
   return sanitizeHTML(htmlString, {
-    allowedTags,
-    allowedAttributes: {
-      ...sanitizeHTML.defaults.allowedAttributes,
-      ...options.sanitizeAllowAttributes,
-    },
-    allowedClasses: {
-      ...options.sanitizeAllowClasses,
-    },
-    allowProtocolRelative: false,
+    ...rest,
+    allowedTags: allowedTags.concat(TAGS),
+    allowedAttributes: ATTRIBUTES,
+    allowedClasses: CLASSES,
   });
 }
